@@ -12,7 +12,7 @@
 <br/>
 
 > **Purely User-Triggered. Zero Background Daemons. Explicit Granular Approvals.**  
-> MacGuard inspects your storage, hardware health, and virtual machines in read-only mode, presents a unified proposal, and executes **only what you explicitly confirm**.
+> MacGuard inspects your storage, hardware health, and virtual machines in read-only mode, cleans verified allowlist caches safely, presents a unified proposal, and executes **only what you explicitly confirm**.
 
 </div>
 
@@ -23,10 +23,11 @@
 Traditional Mac "cleaner" tools run intrusive background daemons, install persistent startup agents, and quietly delete files behind your back.
 
 **MacGuard works differently:**
-- 🚫 **No Background Schedulers:** No launchd daemons, startup services, or cron jobs. MacGuard runs **only** when you invoke `macguard mission`.
+- 🚫 **No Background Schedulers:** No launchd daemons, startup services, or cron jobs. MacGuard runs **only** when you invoke `macguard deep-clean` (or alias `macguard mission`).
+- 🧹 **Automatic Safe Cache Cleanup:** Automatically cleans only a predefined allowlist of verified disposable/regenerable caches. Verifies no dependent application is actively running before touching any cache.
 - 🔍 **Complete Read-Only Inspection First:** Evaluates SSD caches, logs, duplicate files, installers, VMware VMs, and battery health before proposing any action.
-- 🎯 **No Repetitive File Prompts:** Groups files into clean risk-based action categories with exact sizes and recoverable space.
-- 📂 **Granular File-by-File Review:** Inspect and select individual installer images (`.dmg`/`.pkg`) and duplicate clusters before approving.
+- 🎯 **No Repetitive File Prompts:** Groups files into clean risk-based action categories with exact apparent and allocated disk sizes.
+- 📂 **Granular File-by-File Review:** Inspect and select individual installer images (`.dmg`/`.pkg`/`.iso`/`.zip`) and duplicate clusters before approving.
 - ✋ **Explicit Per-Group Confirmation:** Never deletes an approved group without affirmative confirmation (`yes`/`y`). Pressing Enter or empty input **never** approves deletion.
 - 🧮 **Non-Double-Counted Math:** Eliminates nested directory overlap and computes duplicate savings as $(N-1) \times \text{size}$.
 - 🔒 **Zero-Credential Security:** Never asks for or stores passwords. System paths (`/System`, `/usr`), source code, personal documents, and VM disks are strictly shielded.
@@ -35,27 +36,29 @@ Traditional Mac "cleaner" tools run intrusive background daemons, install persis
 
 ## 🔄 10-Stage Mission Pipeline
 
-When you run `macguard mission`, the engine executes 10 stages in sequence:
+When you run `macguard deep-clean`, the engine executes 10 stages in sequence:
 
 ```mermaid
 flowchart TD
-    Start(["🚀 macguard mission"]) --> S1["1️⃣ Inspect Environment & Verify No Daemons"]
-    S1 --> S2["2️⃣ Deep Scan: Caches, Logs, Installers & Duplicates"]
-    S2 --> S3["3️⃣ VMware VM Discovery & Snapshot Inspection"]
-    S3 --> S4["4️⃣ Battery Health, Thermals & Mach Memory Pressure"]
-    S4 --> S5["5️⃣ Classify by Risk (LOW, MED, HIGH, PROTECTED)"]
-    S5 --> S6["6️⃣ Non-Double-Counted Storage Savings Math"]
-    S6 --> S7["7️⃣ Generate Consolidated Proposal & Audit Data"]
-    S7 --> S8{"8️⃣ Interactive Proposal & File-by-File Review"}
+    Start(["🚀 macguard deep-clean"]) --> S1["1️⃣ Inspect Environment & Verify No Daemons"]
+    S1 --> S2["2️⃣ Automatic Safe Cache Cleanup (Verified Allowlist & Process Check)"]
+    S2 --> S3["3️⃣ Deep Scan: Caches, Logs, Installers, Duplicates & AI Models"]
+    S3 --> S4["4️⃣ VMware VM Deep Discovery (Virtual Disks, Snapshots, Host vs Guest)"]
+    S4 --> S5["5️⃣ Battery Health, Thermals & Mach Memory Pressure"]
+    S5 --> S6["6️⃣ Classify by Risk (LOW, MED, HIGH, PROTECTED)"]
+    S6 --> S7["7️⃣ Non-Double-Counted Storage Savings Math"]
+    S7 --> S8["8️⃣ Generate Consolidated Proposal & Audit Data"]
+    S8 --> S9{"9️⃣ Interactive Proposal & File-by-File Review"}
     
-    S8 -- "Proceed with Approved" --> S9["9️⃣ Explicit Confirmation & Safe Execution"]
-    S8 -- "Quit / No Approval" --> S10["🔟 Post-Verification & Final Reports"]
-    S9 --> S10
+    S9 -- "Proceed with Approved" --> S10["🔟 Explicit Confirmation & Verified Execution"]
+    S9 -- "Quit / No Approval" --> Report["📊 Storage Reports (Markdown + JSON)"]
+    S10 --> Report
     
     style Start fill:#00C7FF,stroke:#007ACC,stroke-width:2px,color:#000
-    style S8 fill:#FFA500,stroke:#CC8400,stroke-width:2px,color:#000
-    style S9 fill:#00E676,stroke:#00B248,stroke-width:2px,color:#000
-    style S10 fill:#7C4DFF,stroke:#5C35CC,stroke-width:2px,color:#fff
+    style S2 fill:#00E676,stroke:#00B248,stroke-width:2px,color:#000
+    style S9 fill:#FFA500,stroke:#CC8400,stroke-width:2px,color:#000
+    style S10 fill:#00E676,stroke:#00B248,stroke-width:2px,color:#000
+    style Report fill:#7C4DFF,stroke:#5C35CC,stroke-width:2px,color:#fff
 ```
 
 ---
@@ -155,19 +158,20 @@ Choose your preferred way to install and configure your `$PATH`:
 ### 2. Start Your Mission
 Anywhere in your terminal, simply run:
 ```bash
-macguard mission
+macguard deep-clean
 ```
-*(Or double-click **`Launch_MacGuard.command`** in Finder to run with one click!)*
+*(Or alias `macguard mission`, or double-click **`Launch_MacGuard.command`** in Finder to run with one click!)*
 
 ### 3. CLI Command Options
 
 | Command | Description |
 | :--- | :--- |
-| `macguard mission` | Launch the full 10-stage interactive maintenance engine. |
-| `macguard mission --dry-run` | Run all scans and simulate approved executions without modifying any file. |
-| `macguard mission --synthetic-test` | Run self-contained test on temporary synthetic files. |
-| `macguard mission --approve-low-risk` | Automatically select low-risk disposable caches. |
-| `macguard mission --reject-all` | Run scan, generate reports, and exit without changes. |
+| `macguard deep-clean` | Launch the full 10-stage deep storage analysis and safe cache cleanup engine. |
+| `macguard mission` | Alias for `macguard deep-clean`. |
+| `macguard deep-clean --dry-run` | Run all scans and simulate approved executions without modifying any file. |
+| `macguard deep-clean --synthetic-test` | Run self-contained test on temporary synthetic files. |
+| `macguard deep-clean --approve-low-risk` | Automatically select low-risk disposable caches in review menu. |
+| `macguard deep-clean --reject-all` | Run scan, generate reports, and exit without any optional modifications. |
 | `macguard status` | Display engine configuration, on-demand status, and report count. |
 | `macguard reports list` | List all saved JSON and Markdown mission reports. |
 | `macguard reports latest` | Print the latest mission report in terminal. |
