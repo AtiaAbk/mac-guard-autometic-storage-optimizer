@@ -1,17 +1,18 @@
 """
-MacGuard Mission Engine Orchestrator.
+MacGuard Deep Cleaning & Storage Intelligence Engine Orchestrator.
 
-Orchestrates the complete 10-stage on-demand maintenance workflow:
-Stage 1: Environment inspection and configuration validation
-Stage 2: Accessible storage and artifacts scan
-Stage 3: VMware VM discovery and inspection (protected)
-Stage 4: Battery health and performance assessment
-Stage 5: Classification and grouping
-Stage 6: Non-double-counted savings calculation
-Stage 7: Consolidated report and plan generation
-Stage 8: Interactive review, granular file review & approval
-Stage 9: Safe execution with per-group confirmation
-Stage 10: Post-execution verification and final reporting
+Full Workflow:
+1. Inspect environment & verify on-demand configuration (no schedulers)
+2. Automatic Safe Cache Cleanup (Predefined Allowlist with Process Liveness checks)
+3. Deep Storage Analysis (Volumes, User Directories, Caches, Logs, Installers, Duplicates)
+4. Deep VMware Fusion Analysis (Virtual disks, snapshots, ISOs, host vs guest)
+5. Battery, Thermals & Mach Virtual Memory Pressure Assessment
+6. Risk Tier & Usefulness Classification
+7. Non-Double-Counted Storage Savings Calculation
+8. Consolidated Action Proposal & Machine-Readable Audit Data Generation
+9. Interactive Review Menu (Installers, Duplicates, Large Files, VMware, Whole Groups)
+10. Safe Execution of Explicitly Approved Items (Per-Group Affirmative Confirmation)
+11. Post-Execution Verification & Persistent Reporting
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from macguard.utils.ui import Colors, style, print_header, print_divider, storag
 from macguard.config import get_reports_dir, get_audit_dir
 
 from macguard.stages.stage1_environment import inspect_environment
+from macguard.stages.stage_safe_autoclean import execute_safe_autoclean
 from macguard.stages.stage2_storage_scan import scan_storage
 from macguard.stages.stage3_vmware_scan import inspect_vmware
 from macguard.stages.stage4_health_perf import assess_health_and_performance
@@ -40,7 +42,7 @@ from macguard.stages.stage10_verify import verify_and_report
 
 class MissionEngine:
     """
-    Executes a complete MacGuard mission from start to finish.
+    Executes a complete MacGuard deep-cleaning mission from start to finish.
     """
 
     def __init__(
@@ -49,6 +51,7 @@ class MissionEngine:
         audit_dir: Optional[Path] = None,
         dry_run: bool = False,
         non_interactive: bool = False,
+        auto_only: bool = False,
         approve_groups: Optional[List[str]] = None,
         approve_low_risk: bool = False,
         reject_all: bool = False,
@@ -60,6 +63,7 @@ class MissionEngine:
         self.audit_dir = audit_dir or get_audit_dir()
         self.dry_run = dry_run
         self.non_interactive = non_interactive
+        self.auto_only = auto_only
         self.approve_groups = approve_groups
         self.approve_low_risk = approve_low_risk
         self.reject_all = reject_all
@@ -70,22 +74,23 @@ class MissionEngine:
 
     def run(self) -> Dict[str, Any]:
         """
-        Runs the full 10-stage mission under concurrency lock with live progress presentation.
+        Runs the full on-demand deep-cleaning mission under atomic concurrency lock.
         """
         lock = MissionLock()
         try:
             lock.acquire()
         except LockError as e:
-            print(style(f"\n[MacGuard Error] {e}", Colors.RED, Colors.BOLD))
+            print(style(f"\n[MacGuard Concurrency Lock] {e}", Colors.RED, Colors.BOLD))
             sys.exit(1)
 
         start_time = time.time()
-        print_header("MACGUARD ON-DEMAND MAINTENANCE ENGINE", "Exclusively User-Triggered | Zero Background Services")
+        print_header("MACGUARD — DEEP CLEANING & STORAGE INTELLIGENCE", "Exclusively User-Triggered | Apple Silicon & macOS Optimized")
 
         if self.dry_run:
-            print(style("  * Mode: DRY-RUN SIMULATION (No files will be modified or deleted)", Colors.YELLOW, Colors.BOLD))
+            print(style("  * Mode: DRY-RUN SIMULATION (Read-only analysis; no files will be deleted)", Colors.YELLOW, Colors.BOLD))
 
         self.audit_logger.log_event("MISSION_STARTED", {
+            "command": "deep-clean",
             "dry_run": self.dry_run,
             "non_interactive": self.non_interactive,
             "reports_dir": str(self.reports_dir)
@@ -93,9 +98,9 @@ class MissionEngine:
 
         try:
             # -------------------------------------------------------------
-            # Stage 1: Environment Inspection
+            # Stage 1: Environment Inspection & Configuration Validation
             # -------------------------------------------------------------
-            live_progress_step(1, 10, "Inspecting Environment & Verifying On-Demand Configuration")
+            live_progress_step(1, 10, "Inspecting Environment & Verifying No Background Daemons")
             env_info = inspect_environment()
             root_storage = env_info.get("storage", {}).get("root", {})
             used_pct = root_storage.get("pct_used", 0.0)
@@ -110,17 +115,28 @@ class MissionEngine:
                 print(style("  ! Notice: Background scheduler files detected. MacGuard strictly operates on-demand.", Colors.YELLOW))
 
             # -------------------------------------------------------------
-            # Stage 2: Storage & Artifacts Deep Scan
+            # Stage 2: Automatic Safe Cache Cleanup (Predefined Allowlist)
             # -------------------------------------------------------------
-            live_progress_step(2, 10, "Analyzing Storage: Caches, Logs, Installers, Duplicates & Developer Artifacts")
+            live_progress_step(2, 10, "Automatic Safe Cache Cleanup (Predefined Allowlist & Process Verification)")
+            autoclean_summary = execute_safe_autoclean(
+                base_dir=self.synthetic_root,
+                dry_run=self.dry_run,
+                allow_synthetic=self.allow_synthetic,
+                audit_logger=self.audit_logger
+            )
+
+            # -------------------------------------------------------------
+            # Stage 3: Deep Storage & Artifacts Analysis
+            # -------------------------------------------------------------
+            live_progress_step(3, 10, "Deep Storage Analysis: User Directories, Logs, Installers, Duplicates & AI Models")
             storage_scan = scan_storage(
                 search_roots=self.search_roots,
                 synthetic_root=self.synthetic_root
             )
-            cache_bytes = sum(c["size_bytes"] for c in storage_scan.get("caches", []))
-            log_bytes = sum(l["size_bytes"] for l in storage_scan.get("logs", []))
-            inst_bytes = sum(i["size_bytes"] for i in storage_scan.get("installers", []))
-            dup_bytes = sum(d["potential_savings_bytes"] for d in storage_scan.get("duplicates", []))
+            cache_bytes = sum(c.get("apparent_bytes", 0) for c in storage_scan.get("caches", []))
+            log_bytes = sum(l.get("apparent_bytes", 0) for l in storage_scan.get("logs", []))
+            inst_bytes = sum(i.get("apparent_bytes", 0) for i in storage_scan.get("installers", []))
+            dup_bytes = sum(d.get("potential_savings_bytes", 0) for d in storage_scan.get("duplicates", []))
 
             print(f"  • Application Caches:     {len(storage_scan['caches'])} targets ({format_bytes(cache_bytes)})")
             print(f"  • Diagnostic Logs:        {len(storage_scan['logs'])} items ({format_bytes(log_bytes)})")
@@ -131,21 +147,23 @@ class MissionEngine:
                 print(f"  • Local AI Models:        {len(storage_scan['local_ai_models'])} repositories")
 
             # -------------------------------------------------------------
-            # Stage 3: VMware VM Discovery & Inspection
+            # Stage 4: VMware Fusion Deep Inspection (Strictly Protected)
             # -------------------------------------------------------------
-            live_progress_step(3, 10, "Discovering VMware Virtual Machines & Inspecting Host Storage")
+            live_progress_step(4, 10, "Deep VMware Fusion Inspection (Virtual Disks, Snapshots, Host vs Guest)")
             vmware_scan = inspect_vmware()
             if vmware_scan["discovered_vms"]:
-                print(style(f"  • Discovered {len(vmware_scan['discovered_vms'])} VM bundle(s) ({vmware_scan['total_vm_storage_human']}):", Colors.CYAN))
+                print(style(f"  • Discovered {len(vmware_scan['discovered_vms'])} VM bundle(s) ({vmware_scan['total_host_storage_human']}):", Colors.CYAN))
                 for vm in vmware_scan["discovered_vms"]:
-                    print(style(f"    - {vm['display_name']} ({vm['guest_os']}): {vm['size_human']}, {vm['snapshots_count']} snapshot(s) [STRICTLY PROTECTED - NO CHANGES]", Colors.GRAY))
+                    snaps = vm['snapshot_chains']['snapshot_count']
+                    delta_sz = vm['snapshot_chains']['delta_storage_human']
+                    print(style(f"    - {vm['display_name']} ({vm['guest_os']}): Apparent {vm['apparent_human']} | Allocated {vm['allocated_human']}, {snaps} snapshot(s) ({delta_sz}) [STRICTLY PROTECTED]", Colors.GRAY))
             else:
                 print("  • No VMware virtual machine bundles found in standard paths.")
 
             # -------------------------------------------------------------
-            # Stage 4: Health, Battery & System Pressure Assessment
+            # Stage 5: Battery Health, Thermal State & System Pressure
             # -------------------------------------------------------------
-            live_progress_step(4, 10, "Assessing Battery Health, Thermal State & System Pressure")
+            live_progress_step(5, 10, "Assessing Battery Health, Thermal State & Mach Memory Pressure")
             health_perf = assess_health_and_performance()
             batt = health_perf.get("battery", {})
             if batt.get("has_battery"):
@@ -159,38 +177,50 @@ class MissionEngine:
                 print(style(f"  • Assessment: {rec}", Colors.GRAY))
 
             # -------------------------------------------------------------
-            # Stage 5: Classification Engine
+            # Stage 6: Risk Tier Classification
             # -------------------------------------------------------------
-            live_progress_step(5, 10, "Classifying Findings by Risk, Usefulness, Confidence & Action")
+            live_progress_step(6, 10, "Classifying Findings by Risk, Usefulness, Confidence & Action")
             groups = classify_findings(storage_scan, vmware_scan)
             print(f"  ✓ Structured discovered items into {len(groups)} distinct action proposal categories.")
 
             # -------------------------------------------------------------
-            # Stage 6: Savings Calculation (No Double Counting)
+            # Stage 7: Realistic Savings Calculation (No Double-Counting)
             # -------------------------------------------------------------
-            live_progress_step(6, 10, "Calculating Realistic Non-Double-Counted Potential Storage Savings")
+            live_progress_step(7, 10, "Calculating Non-Double-Counted Realistic Storage Savings")
             savings = calculate_savings(groups)
             print(f"  • Net Realistic Potential:  {style(savings['net_potential_human'], Colors.BOLD, Colors.CYAN)}")
             print(f"  • Recommended Safe Savings: {style(savings['recommended_savings_human'], Colors.BOLD, Colors.GREEN)} (Low-Risk disposable caches only)")
 
             # -------------------------------------------------------------
-            # Stage 7: Consolidated Action Plan & Mission Report Generation
+            # Stage 8: Consolidated Action Plan & Audit Data Generation
             # -------------------------------------------------------------
-            live_progress_step(7, 10, "Generating Consolidated Action Proposal & Machine-Readable Audit Data")
-            plan_data = generate_plan_and_report(env_info, storage_scan, vmware_scan, health_perf, groups, savings)
+            live_progress_step(8, 10, "Generating Consolidated Plan & Machine-Readable Audit Data")
+            plan_data = generate_plan_and_report(
+                env_info=env_info,
+                storage_scan=storage_scan,
+                vmware_scan=vmware_scan,
+                health_perf=health_perf,
+                groups=groups,
+                savings=savings,
+                autoclean_summary=autoclean_summary
+            )
             print("  ✓ Consolidated action plan and audit structures prepared.")
 
             # -------------------------------------------------------------
-            # Stage 8: Interactive Consolidated Approval Stage
+            # Stage 9: Interactive Consolidated Approval Stage
             # -------------------------------------------------------------
-            live_progress_step(8, 10, "Consolidated Review & User Approval Interface")
-            approved_ids, custom_files = review_and_approve(
-                groups=groups,
-                non_interactive=self.non_interactive,
-                auto_approve_groups=self.approve_groups,
-                approve_low_risk=self.approve_low_risk,
-                reject_all=self.reject_all
-            )
+            if self.auto_only:
+                print(style("\n  [MacGuard Notice] Running with --auto-only. Optional deletions skipped.", Colors.CYAN))
+                approved_ids, custom_files = set(), {}
+            else:
+                live_progress_step(9, 10, "Interactive Review & Approval Menu (Installers, Duplicates, Optional Deletions)")
+                approved_ids, custom_files = review_and_approve(
+                    groups=groups,
+                    non_interactive=self.non_interactive,
+                    auto_approve_groups=self.approve_groups,
+                    approve_low_risk=self.approve_low_risk,
+                    reject_all=self.reject_all
+                )
 
             self.audit_logger.log_event("APPROVAL_DECISION", {
                 "approved_groups": list(approved_ids),
@@ -199,11 +229,11 @@ class MissionEngine:
             })
 
             # -------------------------------------------------------------
-            # Stage 9: Safe Execution Engine (Per-Group Explicit Confirmation)
+            # Stage 10: Safe Execution (Per-Group Affirmative Confirmation)
             # -------------------------------------------------------------
-            live_progress_step(9, 10, "Executing Approved Operations")
+            live_progress_step(10, 10, "Executing Approved Operations & Verifying Disk Storage")
             if not approved_ids:
-                print(style("  [MacGuard Notice] Zero action groups authorized. All files remain unmodified.", Colors.YELLOW))
+                print(style("  [MacGuard Notice] Zero optional action groups authorized. Optional files remain unmodified.", Colors.YELLOW))
                 exec_summary = {
                     "dry_run": self.dry_run,
                     "approved_groups": [],
@@ -225,10 +255,7 @@ class MissionEngine:
                     audit_logger=self.audit_logger
                 )
 
-            # -------------------------------------------------------------
-            # Stage 10: Post-Execution Verification and Final Report
-            # -------------------------------------------------------------
-            live_progress_step(10, 10, "Post-Execution Verification & Writing Final Mission Reports")
+            # Combined Verification & Reporting
             final_report = verify_and_report(
                 plan_data=plan_data,
                 execution_summary=exec_summary,
@@ -236,20 +263,25 @@ class MissionEngine:
                 audit_logger=self.audit_logger
             )
 
+            # Final Summary Screen
             elapsed = round(time.time() - start_time, 2)
-            print_header("MACGUARD MISSION COMPLETE", f"Duration: {elapsed}s | Mode: On-Demand")
+            print_header("MACGUARD DEEP-CLEAN COMPLETE", f"Duration: {elapsed}s | Mode: On-Demand")
 
             ver = final_report.get("verification", {})
-            print(f"  • Initial Available Storage:  {style(ver.get('initial_storage_free', 'N/A'), Colors.BOLD)}")
-            print(f"  • Final Available Storage:    {style(ver.get('final_storage_free', 'N/A'), Colors.BOLD)}")
-            print(f"  • Verified Reclaimed Storage: {style(ver.get('reported_reclaimed_human', '0 B'), Colors.BOLD, Colors.GREEN)}")
-            print(f"  • Verified Deleted Items:     {ver.get('verified_deleted_count', 0)}")
-            print(f"  • Failed / Skipped Items:     {ver.get('unverified_remaining_count', 0) + len(exec_summary.get('skipped_items', []))}")
+            auto_rec = autoclean_summary.get("total_apparent_bytes_cleaned", 0)
+            opt_rec = exec_summary.get("total_reclaimed_bytes", 0)
+            total_rec = auto_rec + opt_rec
+
+            print(f"  • Initial Available Storage:      {style(ver.get('initial_storage_free', 'N/A'), Colors.BOLD)}")
+            print(f"  • Final Available Storage:        {style(ver.get('final_storage_free', 'N/A'), Colors.BOLD)}")
+            print(f"  • Space from Auto Safe Cleanup:   {style(format_bytes(auto_rec), Colors.GREEN)}")
+            print(f"  • Space from Approved Deletions:  {style(format_bytes(opt_rec), Colors.GREEN)}")
+            print(f"  • Total Verified Reclaimed Space: {style(format_bytes(total_rec), Colors.BOLD, Colors.GREEN)}")
 
             rep_files = final_report.get("report_files", {})
             if rep_files:
-                print(f"\n  • Human Report:    {rep_files.get('markdown_report', 'Saved')}")
-                print(f"  • Machine Report:  {rep_files.get('json_report', 'Saved')}")
+                print(f"\n  • Human Report (Markdown):  {rep_files.get('markdown_report', 'Saved')}")
+                print(f"  • Machine Report (JSON):    {rep_files.get('json_report', 'Saved')}")
 
             print_divider()
             return final_report
