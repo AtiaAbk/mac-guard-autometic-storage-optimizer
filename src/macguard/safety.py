@@ -62,7 +62,6 @@ class SafetyPolicy:
         if not path.exists():
             return True, None
 
-        # Check write access to the file or directory
         if not os.access(str(path), os.W_OK):
             return False, (
                 f"Path '{path}' requires elevated administrator privileges. "
@@ -70,7 +69,6 @@ class SafetyPolicy:
                 f"To remove manually if desired, run in a separate terminal: sudo rm -rf '{path}'"
             )
 
-        # Check write access to parent directory (needed to unlink)
         parent = path.parent
         if parent.exists() and not os.access(str(parent), os.W_OK):
             return False, (
@@ -92,7 +90,10 @@ class SafetyPolicy:
             return False, f"Could not resolve path safely: {e}"
 
         # Synthetic test directories are allowed if explicitly flagged
-        if allow_synthetic and ".macguard_synthetic_test" in str(resolved):
+        if allow_synthetic and (
+            ".macguard_synthetic_test" in str(resolved) or
+            ".macguard_autoclean_test" in str(resolved)
+        ):
             return True, None
 
         # Check system paths first
