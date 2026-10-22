@@ -141,19 +141,23 @@ Review & Approval Commands:
 
 ## 🚀 Quick Start
 
-### 1. Installation
-Clone the repository and install the `macguard` command into your `PATH`:
+### 1. One-Click Setup
+Choose your preferred way to install and configure your `$PATH`:
 
-```bash
-git clone https://github.com/AtiaAbk/mac-guard-autometic-storage-optimizer.git
-cd mac-guard-autometic-storage-optimizer
-./install.sh
-```
+- **Option A (Finder Double-Click):** Just double-click **`install.command`** in Finder!
+- **Option B (Terminal):** Run `./install.sh` from the repository folder:
+  ```bash
+  ./install.sh
+  ```
 
-### 2. Run an Interactive Maintenance Mission
+*The installer automatically links `macguard` to your binary paths and registers the global command in `~/.zshrc` and `~/.bash_profile`.*
+
+### 2. Start Your Mission
+Anywhere in your terminal, simply run:
 ```bash
 macguard mission
 ```
+*(Or double-click **`Launch_MacGuard.command`** in Finder to run with one click!)*
 
 ### 3. CLI Command Options
 
