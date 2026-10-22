@@ -79,26 +79,30 @@ MacGuard provides a live terminal interface with graphical storage meters, categ
   • Security: SIP System Integrity Protection enabled.
   ✓ Verification: Purely on-demand. Zero background daemons or launchd jobs.
 
-[2/10] Analyzing Storage: Caches, Logs, Installers, Duplicates & Developer Artifacts
+[2/10] Automatic Safe Cache Cleanup (Predefined Allowlist & Process Verification)
+  ✓ Automatically Cleaned: Apple Help Viewer Disposable Cache (20.51 KB)
+  • Skipped 'Google Chrome Web Cache': Process 'Google Chrome' is actively running.
+
+[3/10] Analyzing Storage: Caches, Logs, Installers, Duplicates & Developer Artifacts
   • Application Caches:     8 targets (3.17 GB)
   • Diagnostic Logs:        12 items (45.2 MB)
   • Downloaded Installers:  3 files (1.80 GB)
   • Duplicate Candidates:   2 clusters (450.0 MB)
   • Developer Artifacts:    Xcode DerivedData (2.10 GB), Pip Cache (120 MB)
 
-[3/10] Discovering VMware Virtual Machines & Inspecting Host Storage
+[4/10] Discovering VMware Virtual Machines & Inspecting Host Storage
   • Discovered 2 VM bundle(s) (45.0 GB):
     - Ubuntu 24.04 (ubuntu64): 25.0 GB, 1 snapshot [STRICTLY PROTECTED - NO CHANGES]
     - Windows 11 (windows11-64): 20.0 GB, 0 snapshots [STRICTLY PROTECTED - NO CHANGES]
 
-[4/10] Assessing Battery Health, Thermal State & System Pressure
+[5/10] Assessing Battery Health, Thermal State & System Pressure
   • Battery:   92% (charging) on AC Power | Condition: Normal (242 cycles)
   • CPU Load:  [2.11, 2.30, 2.43] | Memory Pressure: Normal
 
-[5/10] Classifying Findings by Risk, Usefulness, Confidence & Action
+[6/10] Classifying Findings by Risk, Usefulness, Confidence & Action
   ✓ Structured discovered items into 5 distinct proposal categories.
 
-[6/10] Calculating Realistic Non-Double-Counted Potential Storage Savings
+[7/10] Calculating Realistic Non-Double-Counted Potential Storage Savings
   • Net Realistic Potential:  7.68 GB
   • Recommended Safe Savings: 5.27 GB (Low-Risk disposable caches only)
 
@@ -121,6 +125,121 @@ Review & Approval Commands:
   • 'proceed'                 -> Proceed to explicit confirmation before execution
   • 'quit'                    -> Exit safely with zero modifications
 ```
+
+---
+
+## 📖 Step-by-Step Operating Guide
+
+MacGuard is designed to be interactive, transparent, and completely under your control. Here is how to operate it from start to finish:
+
+### Step 1: Launch MacGuard
+Open Terminal and run:
+```bash
+macguard deep-clean
+```
+*(Or double-click `Launch_MacGuard.command` in Finder).*
+
+### Step 2: Automatic Safe Cache Cleanup (Zero Risk)
+MacGuard first inspects your system and cleans **only** a verified allowlist of regenerable, disposable user caches (e.g., Apple Help Viewer caches, font caches, QuickLook thumbnails, package manager caches).
+- **Process Liveness Protection:** Before touching any cache, MacGuard checks if the corresponding application is running (e.g., Google Chrome, Safari, Slack). If the app is active, its cache is automatically skipped.
+- Reclaimed space is measured and reported right away.
+
+### Step 3: Understand the Consolidated Action Proposal
+After analyzing your storage, MacGuard displays an interactive menu grouping findings into risk tiers:
+- **`[APPROVED]` (Green):** Low-risk disposable caches and build artifacts pre-selected for your convenience.
+- **`[REJECTED]` (Gray):** Medium and High-risk items (logs, installers, duplicates) that are unselected by default.
+- **`[CUSTOM X/Y]` (Cyan):** Indicates individual files you have reviewed and selected.
+- **`[PROTECTED]` (Blue):** Inviolable items (e.g., VMware virtual machines, system files) that MacGuard inspects for your information but will **never** modify.
+
+### Step 4: Interact with the Proposal Menu
+Type any of the following commands directly at the prompt:
+
+| Command | Action |
+| :--- | :--- |
+| `approve <#>` | Approve a specific category by number (e.g., `approve 1` or `approve 1,2`). |
+| `approve low-risk` | Approve all low-risk disposable cache groups at once. |
+| `reject <#>` | Uncheck a group so its files remain untouched (e.g., `reject 1`). |
+| `details <#>` | Inspect the list of exact file paths contained in group `#`. |
+| `review installers` | Open the interactive file-by-file installer selector. |
+| `review duplicates` | Open the duplicate cluster resolver to choose which copies to delete. |
+| `proceed` | Move to explicit per-group confirmation and execution. |
+| `quit` | Exit immediately. Zero optional files are modified. |
+
+> [!NOTE]
+> **Safety Rule on Input:** Pressing **Enter with empty input** or typing an invalid command will **never** approve any action.
+
+---
+
+### Step 5: File-by-File Review (Installers & Duplicates)
+
+#### A. Reviewing Old Installers (`review installers` or `review 4`)
+Displays every discovered `.dmg`, `.pkg`, `.iso`, and `.zip` installer with its path, size, and date:
+```text
+[1] /Users/.../Downloads/Docker.dmg (780.20 MB) - Modified: 2026-08-10
+[2] /Users/.../Downloads/Postman.zip (145.10 MB) - Modified: 2026-09-02
+
+Commands:
+  • 'delete 1'    -> Mark Docker.dmg for deletion
+  • 'keep 1'      -> Keep Docker.dmg (do not delete)
+  • 'delete all'  -> Mark all listed installers
+  • 'keep all'    -> Unmark all listed installers
+  • 'done'        -> Save your selection and return to main proposal
+```
+
+#### B. Reviewing Duplicate Clusters (`review duplicates` or `review 5`)
+MacGuard matches identical files by cryptographic SHA-256 hash. The first copy is always identified as the original:
+```text
+[Cluster #1] Matching SHA256 (2 identical copies, 450 MB each):
+  (1) [KEEP ORIGINAL]     /Users/.../Documents/presentation_final.mp4
+  (2) [DELETE CANDIDATE] /Users/.../Downloads/presentation_final_copy.mp4
+
+Commands:
+  • 'default'         -> Automatically keep copy 1 and mark copies 2..N for deletion
+  • 'delete 1.2'      -> Mark cluster 1, copy 2 for deletion
+  • 'keep 1.2'        -> Keep cluster 1, copy 2
+  • 'keep all'        -> Unmark all duplicate candidates
+  • 'done'            -> Save selection and return to main proposal
+```
+
+---
+
+### Step 6: Explicit Affirmative Confirmation
+When you type `proceed`, MacGuard asks for confirmation **individually for each approved group**.
+It displays:
+- The category name and risk level
+- Total files to be removed
+- Estimated recoverable space
+- The full list of target paths
+
+```text
+================================================================================
+  EXPLICIT CONFIRMATION: Downloaded Installers & Disk Images [old_installers]
+================================================================================
+Scope of Proposed Operations:
+  • Risk Level:        MEDIUM
+  • Files to Remove:   1 target item(s)
+  • Estimated Space:   780.20 MB
+Target Paths:
+    [1] /Users/.../Downloads/Docker.dmg (780.20 MB)
+--------------------------------------------------------------------------------
+Type 'yes' or 'y' to confirm deletion of this group [y/N]:
+```
+
+- Type **`yes`** or **`y`** to execute the deletion of this specific group.
+- **Pressing Enter, typing `n`, timeout, or pressing `Ctrl+C` will skip the group safely.**
+
+---
+
+### Step 7: Post-Verification & Reports
+After execution, MacGuard:
+1. Re-queries disk storage via `statvfs` to verify actual byte-level disk recovery.
+2. Generates two timestamped audit reports in `~/.macguard/reports/`:
+   - 📄 **Markdown (`.md`):** Human-readable summary with storage breakdowns, hardware state, and skipped items.
+   - 🤖 **JSON (`.json`):** Full machine-readable record for automated audits.
+3. You can inspect the latest report at any time with:
+   ```bash
+   macguard reports latest
+   ```
 
 ---
 
