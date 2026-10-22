@@ -2,7 +2,8 @@
 MacGuard CLI: Command-Line Interface.
 
 Usage:
-    macguard mission [options]
+    macguard deep-clean [options]
+    macguard mission [options]  (alias)
     macguard status
     macguard reports [list | latest]
 """
@@ -20,58 +21,64 @@ from macguard.engine import MissionEngine
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="macguard",
-        description="MacGuard On-Demand Maintenance Engine for macOS."
+        description="MacGuard: On-Demand Deep Cleaning & Storage Intelligence for macOS on Apple Silicon."
     )
     subparsers = parser.add_subparsers(dest="subcommand", help="Available commands")
 
-    # Primary command: `macguard mission`
-    mission_parser = subparsers.add_parser(
-        "mission",
-        help="Initiate complete 10-stage maintenance workflow from start to finish."
-    )
-    mission_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Simulate execution without modifying or deleting any files."
-    )
-    mission_parser.add_argument(
-        "--non-interactive",
-        action="store_true",
-        help="Run without interactive prompts (approves specified flags or defaults to reject all)."
-    )
-    mission_parser.add_argument(
-        "--approve-groups",
-        type=str,
-        default="",
-        help="Comma-separated group IDs to approve (e.g. 'disposable_caches,dev_artifacts')."
-    )
-    mission_parser.add_argument(
-        "--approve-low-risk",
-        action="store_true",
-        help="Approve all verified LOW-risk disposable cache groups."
-    )
-    mission_parser.add_argument(
-        "--reject-all",
-        action="store_true",
-        help="Reject all proposed modifications, save reports, and leave all files unchanged."
-    )
-    mission_parser.add_argument(
-        "--report-dir",
-        type=Path,
-        default=None,
-        help="Custom directory to store mission JSON and Markdown reports."
-    )
-    mission_parser.add_argument(
-        "--audit-dir",
-        type=Path,
-        default=None,
-        help="Custom directory to store audit log."
-    )
-    mission_parser.add_argument(
-        "--synthetic-test",
-        action="store_true",
-        help="Execute isolated end-to-end self-test on temporary synthetic files."
-    )
+    # Primary command: `macguard deep-clean` (with `mission` as fully supported alias)
+    for cmd_name, cmd_help in [
+        ("deep-clean", "Initiate complete on-demand storage analysis and safe deep-cleaning mission."),
+        ("mission", "Alias for deep-clean: complete on-demand storage analysis & cleanup.")
+    ]:
+        p = subparsers.add_parser(cmd_name, help=cmd_help)
+        p.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Simulate execution without modifying or deleting any files."
+        )
+        p.add_argument(
+            "--auto-only",
+            action="store_true",
+            help="Execute only the predefined safe automatic cache cleanup and skip optional review."
+        )
+        p.add_argument(
+            "--non-interactive",
+            action="store_true",
+            help="Run without interactive prompts (approves specified flags or defaults to reject all optional deletions)."
+        )
+        p.add_argument(
+            "--approve-groups",
+            type=str,
+            default="",
+            help="Comma-separated group IDs to approve for optional deletion (e.g. 'disposable_caches,dev_artifacts')."
+        )
+        p.add_argument(
+            "--approve-low-risk",
+            action="store_true",
+            help="Approve all verified LOW-risk disposable cache groups."
+        )
+        p.add_argument(
+            "--reject-all",
+            action="store_true",
+            help="Reject all optional proposed modifications, save reports, and leave all files unchanged."
+        )
+        p.add_argument(
+            "--report-dir",
+            type=Path,
+            default=None,
+            help="Custom directory to store mission JSON and Markdown reports."
+        )
+        p.add_argument(
+            "--audit-dir",
+            type=Path,
+            default=None,
+            help="Custom directory to store audit log."
+        )
+        p.add_argument(
+            "--synthetic-test",
+            action="store_true",
+            help="Execute isolated end-to-end self-test on temporary synthetic files."
+        )
 
     # Status command: `macguard status`
     subparsers.add_parser(
@@ -103,16 +110,16 @@ def cmd_status() -> None:
     print(f"Audit Dir:      {get_audit_dir()}")
     print("Operating Mode: STRICTLY ON-DEMAND (No background daemons)")
 
-    reports = sorted(get_reports_dir().glob("macguard_mission_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    reports = sorted(get_reports_dir().glob("macguard_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
     print(f"Total Missions Recorded: {len(reports)}")
     if reports:
         print(f"Latest Mission: {reports[0].name}")
     print("=" * 60 + "\n")
 
 def cmd_reports(action: str) -> None:
-    reports = sorted(get_reports_dir().glob("macguard_mission_*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    reports = sorted(get_reports_dir().glob("macguard_*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not reports:
-        print(f"No reports found in {get_reports_dir()}. Run 'macguard mission' to perform a mission.")
+        print(f"No reports found in {get_reports_dir()}. Run 'macguard deep-clean' to perform a mission.")
         return
 
     if action == "latest":
@@ -141,7 +148,7 @@ def main() -> None:
         cmd_reports(args.action)
         sys.exit(0)
 
-    if args.subcommand == "mission":
+    if args.subcommand in {"deep-clean", "mission"}:
         approve_list = [g.strip() for g in args.approve_groups.split(",") if g.strip()] if args.approve_groups else None
 
         if args.synthetic_test:
@@ -153,6 +160,7 @@ def main() -> None:
             reports_dir=args.report_dir,
             audit_dir=args.audit_dir,
             dry_run=args.dry_run,
+            auto_only=getattr(args, "auto_only", False),
             non_interactive=args.non_interactive,
             approve_groups=approve_list,
             approve_low_risk=args.approve_low_risk,
